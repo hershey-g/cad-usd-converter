@@ -5,11 +5,12 @@ A live Canadian dollar to US dollar exchange rate converter. Editorial design, P
 ## Features
 
 - Live exchange rate with three API fallbacks (Frankfurter → exchangerate-api → jsDelivr currency-api)
-- Shows when the rate was last updated (e.g. "3h ago · Nov 12 · 4:00 PM")
+- Manual refresh plus automatic refresh when the app is reopened
+- Shows when the app last refreshed and the market data date separately
 - iOS numeric keyboard on focus
 - Flip direction (CAD ↔ USD)
 - Installable as a PWA on iOS and Android home screen
-- Auto-refreshes rate when reopened from background (if data is >30 min stale)
+- Service worker keeps the installed PWA available offline and pulls app updates
 - No build step — just static HTML, CSS, JS
 
 ## Stack
@@ -22,7 +23,15 @@ Static site. No dependencies.
 
 ## Deploy
 
-Drag the folder into Cloudflare Pages, Netlify, Vercel, or any static host. `index.html` is the entry point.
+Use Cloudflare Pages with GitHub auto-deploys:
+
+- Framework preset: None
+- Build command: leave blank
+- Build output directory: `/`
+- Root directory: `/`
+- Production branch: `main`
+
+`index.html` is the entry point. There is no build step.
 
 ## Install on iPhone
 

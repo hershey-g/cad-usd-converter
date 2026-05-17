@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
-<title>CAD → USD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>CAD to USD</title>
 <meta name="description" content="Live Canadian dollar to US dollar exchange rate." />
 
 <!-- PWA / iOS Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="CAD→USD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CAD USD">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#f4f1ea">
+<meta name="theme-color" content="#f8f4ec">
 <meta name="format-detection" content="telephone=no">
 
 <link rel="manifest" href="manifest.json">
@@ -21,252 +21,315 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,550;9..144,700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f1ea;
-    --ink: #1a1a1a;
-    --muted: #6b6b6b;
-    --line: #1a1a1a;
-    --accent: #c8553d;
-    --paper: #ebe6da;
+    --bg: #f8f4ec;
+    --ink: #14110f;
+    --muted: #736a61;
+    --soft: rgba(20, 17, 15, 0.08);
+    --panel: rgba(255, 252, 246, 0.72);
+    --accent: #b6422e;
+    --accent-soft: rgba(182, 66, 46, 0.12);
+    --green: #1e7b50;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overscroll-behavior: none; }
+  html, body { min-height: 100%; overscroll-behavior: none; }
+  html { overflow-x: hidden; }
   body {
-    font-family: 'Fraunces', Georgia, serif;
-    background: var(--bg);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background:
+      radial-gradient(circle at 16% 4%, rgba(182, 66, 46, 0.13), transparent 34%),
+      linear-gradient(165deg, #fffaf0 0%, var(--bg) 48%, #eee3d0 100%);
     color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
-    background-image:
-      radial-gradient(circle at 20% 10%, rgba(200, 85, 61, 0.06), transparent 40%),
-      radial-gradient(circle at 80% 90%, rgba(26, 26, 26, 0.04), transparent 40%);
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
     min-height: 100dvh;
+    overflow-x: hidden;
   }
-  .grain {
-    position: fixed; inset: 0; pointer-events: none; opacity: 0.4; z-index: 1;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
-  }
-  .card {
-    position: relative;
-    z-index: 2;
+
+  .app {
     width: 100%;
-    max-width: 480px;
-    background: var(--paper);
-    border: 1.5px solid var(--line);
-    padding: 32px 28px 24px;
-    box-shadow: 6px 6px 0 var(--ink);
-  }
-  .header {
+    max-width: 520px;
+    min-width: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: max(22px, env(safe-area-inset-top)) 20px max(22px, env(safe-area-inset-bottom));
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 12px;
-    margin-bottom: 22px;
+    flex-direction: column;
+    gap: 22px;
+    overflow: hidden;
   }
-  .header .meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 4px;
+  }
+
+  .pair {
+    font-size: 12px;
+    font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  h1 {
-    font-weight: 300;
-    font-size: 38px;
-    line-height: 1;
-    letter-spacing: -0.02em;
-  }
-  h1 em {
-    font-style: italic;
-    font-weight: 500;
-    color: var(--accent);
-  }
-  .sub {
-    margin-top: 8px;
-    font-size: 13px;
-    color: var(--muted);
-    font-style: italic;
-  }
-  .pair {
-    font-family: 'JetBrains Mono', monospace;
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.56);
+    color: var(--green);
     font-size: 11px;
-    letter-spacing: 0.2em;
-  }
-  .field { margin-bottom: 18px; }
-  .label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.22em;
+    font-weight: 700;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
+    padding: 0 12px;
+    box-shadow: inset 0 0 0 1px rgba(20, 17, 15, 0.05);
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 4px rgba(30, 123, 80, 0.12);
+  }
+
+  .status.fetching { color: var(--accent); }
+  .status.offline { color: #80766d; }
+
+  .hero {
+    padding-top: clamp(14px, 6vh, 48px);
+  }
+
+  h1 {
+    font-family: Fraunces, Georgia, serif;
+    font-size: clamp(54px, 17vw, 88px);
+    line-height: 0.88;
+    font-weight: 550;
+    letter-spacing: 0;
+    max-width: 7ch;
+  }
+
+  .sub {
+    margin-top: 18px;
+    max-width: 30ch;
     color: var(--muted);
-    margin-bottom: 6px;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .converter {
+    display: grid;
+    gap: 12px;
+    margin-top: auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .money-panel {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--panel);
+    border-radius: 28px;
+    padding: 18px;
+    box-shadow: 0 18px 60px rgba(58, 44, 29, 0.11);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .label {
     display: flex;
     justify-content: space-between;
-  }
-  .input-wrap {
-    display: flex;
     align-items: center;
-    border-bottom: 1.5px solid var(--line);
-    padding: 4px 0;
-    cursor: text;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
   }
-  .input-wrap:focus-within { border-bottom-color: var(--accent); }
+
+  .input-row,
+  .result-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+    gap: 14px;
+    margin-top: 12px;
+  }
+
   .currency-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    padding-right: 12px;
-    border-right: 1px solid var(--line);
-    margin-right: 14px;
-    color: var(--ink);
-    user-select: none;
+    min-width: 64px;
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding-bottom: 11px;
   }
-  input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-family: 'Fraunces', Georgia, serif;
-    font-size: 30px;
-    font-weight: 300;
-    color: var(--ink);
-    outline: none;
-    padding: 6px 0;
+
+  input,
+  .result {
+    min-width: 0;
     width: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: Fraunces, Georgia, serif;
+    font-size: clamp(38px, 12vw, 62px);
+    font-weight: 550;
+    line-height: 0.94;
+    letter-spacing: 0;
+    outline: none;
     -webkit-appearance: none;
     appearance: none;
-    border-radius: 0;
-    min-width: 0;
+    text-align: right;
   }
+
   input:focus { color: var(--accent); }
-  input::placeholder { color: var(--muted); opacity: 0.4; }
+  input::placeholder { color: rgba(20, 17, 15, 0.24); }
+
   .result {
-    font-family: 'Fraunces', Georgia, serif;
-    font-size: 30px;
-    font-weight: 300;
-    flex: 1;
-    padding: 6px 0;
     color: var(--accent);
-    font-style: italic;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  .tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
     min-width: 0;
   }
-  .rate-line {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--line);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    gap: 12px;
-  }
-  .rate-block { flex: 1; min-width: 0; }
-  .rate-block .rate { color: var(--ink); font-weight: 500; display: block; }
-  .rate-block .updated {
-    font-size: 9px;
-    color: var(--muted);
-    margin-top: 4px;
-    display: block;
-    letter-spacing: 0.1em;
-  }
-  .swap {
-    background: none;
-    border: 1px solid var(--line);
-    color: var(--ink);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    padding: 10px 14px;
+
+  button {
+    min-height: 54px;
+    border: 0;
+    border-radius: 18px;
+    background: rgba(20, 17, 15, 0.92);
+    color: #fffaf0;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     cursor: pointer;
-    text-transform: uppercase;
-    transition: background 0.15s ease, color 0.15s ease;
-    flex-shrink: 0;
-    min-height: 36px;
+    touch-action: manipulation;
   }
-  .swap:active { background: var(--ink); color: var(--bg); }
-  @media (hover: hover) {
-    .swap:hover { background: var(--ink); color: var(--bg); }
+
+  button.secondary {
+    background: var(--accent-soft);
+    color: var(--accent);
   }
-  .footer {
-    margin-top: 18px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+
+  button:active { transform: translateY(1px) scale(0.99); }
+  button[disabled] { opacity: 0.62; cursor: wait; }
+
+  .rate-card {
+    display: grid;
+    gap: 8px;
+    border-radius: 24px;
+    padding: 16px 18px;
+    background: rgba(255, 252, 246, 0.52);
     color: var(--muted);
+    font-size: 13px;
+    line-height: 1.38;
+    box-shadow: inset 0 0 0 1px rgba(20, 17, 15, 0.05);
+  }
+
+  .rate-card strong {
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .install {
+    display: none;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
     text-align: center;
+    padding: 2px 18px 0;
   }
-  .pulse {
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    margin-right: 6px;
-    animation: pulse 1.6s infinite;
-    vertical-align: middle;
+
+  body.show-install .install { display: block; }
+
+  @media (min-width: 700px) {
+    .app { justify-content: center; padding-inline: 28px; }
+    .hero { padding-top: 0; }
   }
-  .pulse.error { background: #999; animation: none; opacity: 0.6; }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
+
+  @media (max-height: 720px) {
+    .app { gap: 14px; }
+    .hero { padding-top: 6px; }
+    h1 { font-size: clamp(46px, 14vw, 68px); }
+    .sub { margin-top: 12px; }
+    .money-panel { padding: 16px; border-radius: 24px; }
+    button { min-height: 50px; }
   }
 </style>
 </head>
 <body>
-<div class="grain"></div>
-<div class="card">
-  <div class="header">
+<main class="app" aria-labelledby="app-title">
+  <header class="topbar">
     <span class="pair">CAD / USD</span>
-    <span class="meta" id="status">FETCHING…</span>
-  </div>
+    <span class="status fetching" id="status"><span class="dot"></span><span id="status-text">Fetching</span></span>
+  </header>
 
-  <h1>Live <em>exchange.</em></h1>
-  <p class="sub">Canadian dollars to United States dollars.</p>
+  <section class="hero">
+    <h1 id="app-title">Live exchange</h1>
+    <p class="sub">A fast Canadian dollar converter for quick checks, travel math, and cross-border prices.</p>
+  </section>
 
-  <div style="margin-top: 26px;">
-    <div class="field">
+  <section class="converter" aria-label="Currency converter">
+    <div class="money-panel">
       <div class="label"><span>You send</span><span id="from-label">CAD</span></div>
-      <label class="input-wrap" for="from-input">
+      <label class="input-row" for="from-input">
         <span class="currency-tag" id="from-tag">CA$</span>
         <input id="from-input" value="100" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" autocomplete="off" enterkeyhint="done" aria-label="Amount to convert" />
       </label>
     </div>
 
-    <div class="field">
+    <div class="money-panel">
       <div class="label"><span>You receive</span><span id="to-label">USD</span></div>
-      <div class="input-wrap">
+      <div class="result-row">
         <span class="currency-tag" id="to-tag">US$</span>
-        <div class="result" id="to-output" aria-live="polite">—</div>
+        <div class="result" id="to-output" aria-live="polite">--</div>
       </div>
     </div>
-  </div>
 
-  <div class="rate-line">
-    <div class="rate-block">
-      <span><span class="pulse" id="pulse"></span><span class="rate" id="rate-display">Fetching rate…</span></span>
-      <span class="updated" id="updated-display">—</span>
+    <div class="tools">
+      <button class="secondary" id="swap-btn" type="button" aria-label="Flip currencies">Flip</button>
+      <button id="refresh-btn" type="button" aria-label="Refresh exchange rate">Refresh</button>
     </div>
-    <button class="swap" id="swap-btn" type="button" aria-label="Flip currencies">⇅ Flip</button>
-  </div>
 
-  <div class="footer">Tap share → Add to Home Screen</div>
-</div>
+    <div class="rate-card" aria-live="polite">
+      <strong id="rate-display">Fetching rate...</strong>
+      <span id="updated-display">Connecting to rate sources.</span>
+      <span id="market-display"></span>
+    </div>
+
+    <p class="install" id="install-copy">Add to Home Screen from Safari to open this as a standalone app.</p>
+  </section>
+</main>
 
 <script>
+  const APP_VERSION = '2026.05.17.2';
+  const CACHE_KEY = 'cad-usd-rate';
   let rate = null;
-  let lastUpdated = null;
+  let marketDate = null;
+  let fetchedAt = null;
   let direction = 'CAD_TO_USD';
+  let isFetching = false;
 
   const $ = (id) => document.getElementById(id);
   const fromInput = $('from-input');
@@ -277,39 +340,86 @@
   const toTag = $('to-tag');
   const rateDisplay = $('rate-display');
   const updatedDisplay = $('updated-display');
+  const marketDisplay = $('market-display');
   const status = $('status');
+  const statusText = $('status-text');
   const swapBtn = $('swap-btn');
-  const pulse = $('pulse');
+  const refreshBtn = $('refresh-btn');
 
-  function format(n) {
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function showInstallHintWhenUseful() {
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    const isSafari = /^((?!crios|fxios|edgios|chrome|android).)*safari/i.test(window.navigator.userAgent);
+    document.body.classList.toggle('show-install', isIos && isSafari && !isStandalone());
+  }
+
+  function formatMoney(n) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function formatUpdated(d) {
-    const now = new Date();
-    const diffMs = now - d;
-    const diffMin = Math.floor(diffMs / 60000);
+  function formatShortDate(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function formatRelative(d) {
+    const diffMs = Math.max(0, Date.now() - d.getTime());
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
     const diffHr = Math.floor(diffMin / 60);
     const diffDay = Math.floor(diffHr / 24);
 
-    let rel;
-    if (diffMin < 1) rel = 'just now';
-    else if (diffMin < 60) rel = `${diffMin}m ago`;
-    else if (diffHr < 24) rel = `${diffHr}h ago`;
-    else if (diffDay === 1) rel = 'yesterday';
-    else rel = `${diffDay}d ago`;
+    if (diffSec < 20) return 'just now';
+    if (diffMin < 1) return `${diffSec}s ago`;
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHr < 24) return `${diffHr}h ago`;
+    if (diffDay === 1) return 'yesterday';
+    return `${diffDay}d ago`;
+  }
 
-    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) +
-                    ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    return `Updated ${rel} · ${dateStr}`;
+  function setStatus(kind, label) {
+    status.className = `status ${kind}`;
+    statusText.textContent = label;
+  }
+
+  function saveCachedRate() {
+    if (!rate || !fetchedAt) return;
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      rate,
+      marketDate: marketDate ? marketDate.toISOString() : null,
+      fetchedAt: fetchedAt.toISOString(),
+      direction
+    }));
+  }
+
+  function loadCachedRate() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (!cached || !cached.rate || !cached.fetchedAt) return;
+      rate = Number(cached.rate);
+      marketDate = cached.marketDate ? new Date(cached.marketDate) : null;
+      fetchedAt = new Date(cached.fetchedAt);
+      direction = cached.direction || direction;
+      setStatus('offline', 'Cached');
+      updateLabels();
+      updateFreshness();
+      calc();
+    } catch (e) {
+      localStorage.removeItem(CACHE_KEY);
+    }
   }
 
   function calc() {
-    let raw = fromInput.value.replace(',', '.');
+    const raw = fromInput.value.replace(',', '.');
     const v = parseFloat(raw);
-    if (!rate || isNaN(v) || v < 0) { toOutput.textContent = '—'; return; }
-    const r = direction === 'CAD_TO_USD' ? rate : 1 / rate;
-    toOutput.textContent = format(v * r);
+    if (!rate || Number.isNaN(v) || v < 0) {
+      toOutput.textContent = '--';
+      return;
+    }
+    const activeRate = direction === 'CAD_TO_USD' ? rate : 1 / rate;
+    toOutput.textContent = formatMoney(v * activeRate);
   }
 
   function updateLabels() {
@@ -318,83 +428,137 @@
       toLabel.textContent = 'USD';
       fromTag.textContent = 'CA$';
       toTag.textContent = 'US$';
-      rateDisplay.textContent = rate ? `1 CAD = ${rate.toFixed(4)} USD` : 'Fetching rate…';
+      rateDisplay.textContent = rate ? `1 CAD = ${rate.toFixed(4)} USD` : 'Fetching rate...';
     } else {
       fromLabel.textContent = 'USD';
       toLabel.textContent = 'CAD';
       fromTag.textContent = 'US$';
       toTag.textContent = 'CA$';
-      rateDisplay.textContent = rate ? `1 USD = ${(1/rate).toFixed(4)} CAD` : 'Fetching rate…';
+      rateDisplay.textContent = rate ? `1 USD = ${(1 / rate).toFixed(4)} CAD` : 'Fetching rate...';
     }
   }
 
-  async function fetchRate() {
-    status.textContent = 'FETCHING…';
-    pulse.className = 'pulse';
+  function updateFreshness() {
+    if (!fetchedAt) return;
+    updatedDisplay.textContent = `Refreshed ${formatRelative(fetchedAt)}.`;
+    marketDisplay.textContent = marketDate ? `Market data date: ${formatShortDate(marketDate)}.` : '';
+  }
+
+  async function fetchRate(options = {}) {
+    if (isFetching) return;
+    isFetching = true;
+    refreshBtn.disabled = true;
+    if (!options.silent) {
+      setStatus('fetching', 'Fetching');
+      updatedDisplay.textContent = 'Refreshing rate...';
+    }
 
     const sources = [
       {
         url: 'https://api.frankfurter.dev/v1/latest?base=CAD&symbols=USD',
-        parse: (d) => ({ rate: d.rates && d.rates.USD, date: d.date ? new Date(d.date + 'T16:00:00Z') : new Date() })
+        parse: (d) => ({ rate: d.rates && d.rates.USD, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
       },
       {
         url: 'https://open.er-api.com/v6/latest/CAD',
-        parse: (d) => ({ rate: d.rates && d.rates.USD, date: d.time_last_update_unix ? new Date(d.time_last_update_unix * 1000) : new Date() })
+        parse: (d) => ({ rate: d.rates && d.rates.USD, marketDate: d.time_last_update_unix ? new Date(d.time_last_update_unix * 1000) : null })
       },
       {
         url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cad.json',
-        parse: (d) => ({ rate: d.cad && d.cad.usd, date: d.date ? new Date(d.date + 'T16:00:00Z') : new Date() })
+        parse: (d) => ({ rate: d.cad && d.cad.usd, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
       }
     ];
 
     for (const src of sources) {
+      const bust = src.url.includes('?') ? '&' : '?';
+      const url = `${src.url}${bust}_=${Date.now()}`;
       try {
         const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 6000);
-        const res = await fetch(src.url, { cache: 'no-store', signal: ctrl.signal });
+        const timeout = setTimeout(() => ctrl.abort(), 7000);
+        const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
         clearTimeout(timeout);
         if (!res.ok) continue;
+
         const data = await res.json();
         const parsed = src.parse(data);
-        if (parsed.rate && !isNaN(parsed.rate)) {
-          rate = parsed.rate;
-          lastUpdated = parsed.date;
-          status.textContent = 'LIVE';
-          pulse.className = 'pulse';
-          updatedDisplay.textContent = formatUpdated(lastUpdated);
+        if (parsed.rate && !Number.isNaN(parsed.rate)) {
+          rate = Number(parsed.rate);
+          marketDate = parsed.marketDate;
+          fetchedAt = new Date();
+          setStatus('', 'Live');
           updateLabels();
+          updateFreshness();
           calc();
+          saveCachedRate();
+          isFetching = false;
+          refreshBtn.disabled = false;
           return;
         }
-      } catch (e) { /* try next */ }
+      } catch (e) {
+        /* Try the next source. */
+      }
     }
 
-    rateDisplay.textContent = 'Rate unavailable';
-    updatedDisplay.textContent = 'Check connection · tap Flip to retry';
-    status.textContent = 'OFFLINE';
-    pulse.className = 'pulse error';
+    setStatus('offline', 'Offline');
+    rateDisplay.textContent = rate ? rateDisplay.textContent : 'Rate unavailable';
+    updatedDisplay.textContent = rate ? `Using cached rate from ${formatRelative(fetchedAt)}.` : 'Check connection, then tap Refresh.';
+    isFetching = false;
+    refreshBtn.disabled = false;
+  }
+
+  function maybeRefresh() {
+    if (!fetchedAt) {
+      fetchRate();
+      return;
+    }
+    const ageMin = (Date.now() - fetchedAt.getTime()) / 60000;
+    if (ageMin > 10) fetchRate({ silent: true });
+    else updateFreshness();
   }
 
   fromInput.addEventListener('input', calc);
   fromInput.addEventListener('focus', () => fromInput.select());
   swapBtn.addEventListener('click', () => {
-    if (!rate) { fetchRate(); return; }
     direction = direction === 'CAD_TO_USD' ? 'USD_TO_CAD' : 'CAD_TO_USD';
     updateLabels();
     calc();
+    saveCachedRate();
   });
+  refreshBtn.addEventListener('click', () => fetchRate());
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && lastUpdated) {
-      const ageMin = (Date.now() - lastUpdated) / 60000;
-      if (ageMin > 30) fetchRate();
-      else updatedDisplay.textContent = formatUpdated(lastUpdated);
-    } else if (!document.hidden && !lastUpdated) {
-      fetchRate();
-    }
+    if (!document.hidden) maybeRefresh();
   });
+  window.addEventListener('focus', maybeRefresh);
+  window.addEventListener('pageshow', maybeRefresh);
+  window.setInterval(updateFreshness, 30000);
+  window.setInterval(() => fetchRate({ silent: true }), 15 * 60 * 1000);
 
-  fetchRate();
+  showInstallHintWhenUseful();
+  loadCachedRate();
+  fetchRate({ silent: Boolean(rate) });
+
+  if ('serviceWorker' in navigator) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              worker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      }).catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
