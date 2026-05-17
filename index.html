@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
+<title>CAD → USD</title>
+<meta name="description" content="Live Canadian dollar to US dollar exchange rate." />
+
+<!-- PWA / iOS Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CAD→USD">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f4f1ea">
+<meta name="format-detection" content="telephone=no">
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --line: #1a1a1a;
+    --accent: #c8553d;
+    --paper: #ebe6da;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    font-family: 'Fraunces', Georgia, serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(200, 85, 61, 0.06), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(26, 26, 26, 0.04), transparent 40%);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.4; z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  }
+  .card {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 480px;
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    padding: 32px 28px 24px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+  }
+  .header .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-weight: 300;
+    font-size: 38px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  h1 em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .sub {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .pair {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+  }
+  .field { margin-bottom: 18px; }
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    border-bottom: 1.5px solid var(--line);
+    padding: 4px 0;
+    cursor: text;
+  }
+  .input-wrap:focus-within { border-bottom-color: var(--accent); }
+  .currency-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding-right: 12px;
+    border-right: 1px solid var(--line);
+    margin-right: 14px;
+    color: var(--ink);
+    user-select: none;
+  }
+  input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 30px;
+    font-weight: 300;
+    color: var(--ink);
+    outline: none;
+    padding: 6px 0;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0;
+    min-width: 0;
+  }
+  input:focus { color: var(--accent); }
+  input::placeholder { color: var(--muted); opacity: 0.4; }
+  .result {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 30px;
+    font-weight: 300;
+    flex: 1;
+    padding: 6px 0;
+    color: var(--accent);
+    font-style: italic;
+    word-break: break-all;
+    min-width: 0;
+  }
+  .rate-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    gap: 12px;
+  }
+  .rate-block { flex: 1; min-width: 0; }
+  .rate-block .rate { color: var(--ink); font-weight: 500; display: block; }
+  .rate-block .updated {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 4px;
+    display: block;
+    letter-spacing: 0.1em;
+  }
+  .swap {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+    min-height: 36px;
+  }
+  .swap:active { background: var(--ink); color: var(--bg); }
+  @media (hover: hover) {
+    .swap:hover { background: var(--ink); color: var(--bg); }
+  }
+  .footer {
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+  .pulse {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 1.6s infinite;
+    vertical-align: middle;
+  }
+  .pulse.error { background: #999; animation: none; opacity: 0.6; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.7); }
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="card">
+  <div class="header">
+    <span class="pair">CAD / USD</span>
+    <span class="meta" id="status">FETCHING…</span>
+  </div>
+
+  <h1>Live <em>exchange.</em></h1>
+  <p class="sub">Canadian dollars to United States dollars.</p>
+
+  <div style="margin-top: 26px;">
+    <div class="field">
+      <div class="label"><span>You send</span><span id="from-label">CAD</span></div>
+      <label class="input-wrap" for="from-input">
+        <span class="currency-tag" id="from-tag">CA$</span>
+        <input id="from-input" value="100" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" autocomplete="off" enterkeyhint="done" aria-label="Amount to convert" />
+      </label>
+    </div>
+
+    <div class="field">
+      <div class="label"><span>You receive</span><span id="to-label">USD</span></div>
+      <div class="input-wrap">
+        <span class="currency-tag" id="to-tag">US$</span>
+        <div class="result" id="to-output" aria-live="polite">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rate-line">
+    <div class="rate-block">
+      <span><span class="pulse" id="pulse"></span><span class="rate" id="rate-display">Fetching rate…</span></span>
+      <span class="updated" id="updated-display">—</span>
+    </div>
+    <button class="swap" id="swap-btn" type="button" aria-label="Flip currencies">⇅ Flip</button>
+  </div>
+
+  <div class="footer">Tap share → Add to Home Screen</div>
+</div>
+
+<script>
+  let rate = null;
+  let lastUpdated = null;
+  let direction = 'CAD_TO_USD';
+
+  const $ = (id) => document.getElementById(id);
+  const fromInput = $('from-input');
+  const toOutput = $('to-output');
+  const fromLabel = $('from-label');
+  const toLabel = $('to-label');
+  const fromTag = $('from-tag');
+  const toTag = $('to-tag');
+  const rateDisplay = $('rate-display');
+  const updatedDisplay = $('updated-display');
+  const status = $('status');
+  const swapBtn = $('swap-btn');
+  const pulse = $('pulse');
+
+  function format(n) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatUpdated(d) {
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    let rel;
+    if (diffMin < 1) rel = 'just now';
+    else if (diffMin < 60) rel = `${diffMin}m ago`;
+    else if (diffHr < 24) rel = `${diffHr}h ago`;
+    else if (diffDay === 1) rel = 'yesterday';
+    else rel = `${diffDay}d ago`;
+
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) +
+                    ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `Updated ${rel} · ${dateStr}`;
+  }
+
+  function calc() {
+    let raw = fromInput.value.replace(',', '.');
+    const v = parseFloat(raw);
+    if (!rate || isNaN(v) || v < 0) { toOutput.textContent = '—'; return; }
+    const r = direction === 'CAD_TO_USD' ? rate : 1 / rate;
+    toOutput.textContent = format(v * r);
+  }
+
+  function updateLabels() {
+    if (direction === 'CAD_TO_USD') {
+      fromLabel.textContent = 'CAD';
+      toLabel.textContent = 'USD';
+      fromTag.textContent = 'CA$';
+      toTag.textContent = 'US$';
+      rateDisplay.textContent = rate ? `1 CAD = ${rate.toFixed(4)} USD` : 'Fetching rate…';
+    } else {
+      fromLabel.textContent = 'USD';
+      toLabel.textContent = 'CAD';
+      fromTag.textContent = 'US$';
+      toTag.textContent = 'CA$';
+      rateDisplay.textContent = rate ? `1 USD = ${(1/rate).toFixed(4)} CAD` : 'Fetching rate…';
+    }
+  }
+
+  async function fetchRate() {
+    status.textContent = 'FETCHING…';
+    pulse.className = 'pulse';
+
+    const sources = [
+      {
+        url: 'https://api.frankfurter.dev/v1/latest?base=CAD&symbols=USD',
+        parse: (d) => ({ rate: d.rates && d.rates.USD, date: d.date ? new Date(d.date + 'T16:00:00Z') : new Date() })
+      },
+      {
+        url: 'https://open.er-api.com/v6/latest/CAD',
+        parse: (d) => ({ rate: d.rates && d.rates.USD, date: d.time_last_update_unix ? new Date(d.time_last_update_unix * 1000) : new Date() })
+      },
+      {
+        url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cad.json',
+        parse: (d) => ({ rate: d.cad && d.cad.usd, date: d.date ? new Date(d.date + 'T16:00:00Z') : new Date() })
+      }
+    ];
+
+    for (const src of sources) {
+      try {
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 6000);
+        const res = await fetch(src.url, { cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(timeout);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const parsed = src.parse(data);
+        if (parsed.rate && !isNaN(parsed.rate)) {
+          rate = parsed.rate;
+          lastUpdated = parsed.date;
+          status.textContent = 'LIVE';
+          pulse.className = 'pulse';
+          updatedDisplay.textContent = formatUpdated(lastUpdated);
+          updateLabels();
+          calc();
+          return;
+        }
+      } catch (e) { /* try next */ }
+    }
+
+    rateDisplay.textContent = 'Rate unavailable';
+    updatedDisplay.textContent = 'Check connection · tap Flip to retry';
+    status.textContent = 'OFFLINE';
+    pulse.className = 'pulse error';
+  }
+
+  fromInput.addEventListener('input', calc);
+  fromInput.addEventListener('focus', () => fromInput.select());
+  swapBtn.addEventListener('click', () => {
+    if (!rate) { fetchRate(); return; }
+    direction = direction === 'CAD_TO_USD' ? 'USD_TO_CAD' : 'CAD_TO_USD';
+    updateLabels();
+    calc();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && lastUpdated) {
+      const ageMin = (Date.now() - lastUpdated) / 60000;
+      if (ageMin > 30) fetchRate();
+      else updatedDisplay.textContent = formatUpdated(lastUpdated);
+    } else if (!document.hidden && !lastUpdated) {
+      fetchRate();
+    }
+  });
+
+  fetchRate();
+</script>
+</body>
+</html>
