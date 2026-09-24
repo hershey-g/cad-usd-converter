@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<title>CAD to USD & AED</title>
-<meta name="description" content="Live Canadian dollar to US dollar and UAE dirham exchange rates." />
+<title>CAD to USD, AED & ILS</title>
+<meta name="description" content="Live Canadian dollar to US dollar, UAE dirham and Israeli shekel exchange rates." />
 
 <!-- PWA / iOS Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -109,7 +109,7 @@
 
   .picker {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 4px;
     padding: 4px;
     border-radius: 18px;
@@ -313,13 +313,14 @@
 
   <section class="hero">
     <h1 id="app-title">Live exchange</h1>
-    <p class="sub">A fast Canadian dollar converter for US dollars and UAE dirhams. Quick checks, travel math, cross-border prices.</p>
+    <p class="sub">A fast Canadian dollar converter for US dollars, UAE dirhams and Israeli shekels. Quick checks, travel math, cross-border prices.</p>
   </section>
 
   <section class="converter" aria-label="Currency converter">
     <div class="picker" role="group" aria-label="Convert CAD against">
       <button type="button" data-currency="USD" aria-pressed="true">USD</button>
       <button type="button" data-currency="AED" aria-pressed="false">AED</button>
+      <button type="button" data-currency="ILS" aria-pressed="false">ILS</button>
     </div>
 
     <div class="money-panel">
@@ -354,11 +355,12 @@
 </main>
 
 <script>
-  const APP_VERSION = '2026.09.23.1';
+  const APP_VERSION = '2026.09.24.1';
   const CACHE_KEY = 'cad-usd-rate';
   const CURRENCIES = {
     USD: { tag: 'US$' },
-    AED: { tag: 'AED' }
+    AED: { tag: 'AED' },
+    ILS: { tag: 'ILS' }
   };
   const HOME = { code: 'CAD', tag: 'CA$' };
   // Each entry: { rate: CAD -> currency, marketDate: Date | null }
@@ -517,10 +519,10 @@
     }
 
     // Each source returns whichever currencies it has. Frankfurter (ECB data)
-    // has no AED, so AED comes from the fallbacks.
+    // has USD and ILS but no AED, so AED comes from the fallbacks.
     const sources = [
       {
-        url: 'https://api.frankfurter.dev/v1/latest?base=CAD&symbols=USD',
+        url: 'https://api.frankfurter.dev/v1/latest?base=CAD&symbols=USD,ILS',
         parse: (d) => ({ rates: d.rates || {}, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
       },
       {
