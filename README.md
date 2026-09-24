@@ -1,15 +1,15 @@
-# CAD → USD / AED
+# CAD → USD / AED / ILS
 
-A live Canadian dollar exchange rate converter for US dollars and UAE dirhams (AED). Editorial design, PWA-installable, works offline as a home screen app on iOS.
+A live Canadian dollar exchange rate converter for US dollars, UAE dirhams (AED) and Israeli shekels (ILS). Editorial design, PWA-installable, works offline as a home screen app on iOS.
 
 ## Features
 
-- Convert CAD against USD or AED with a one-tap picker
+- Convert CAD against USD, AED or ILS with a one-tap picker
 - Live exchange rate with three API fallbacks (Frankfurter → exchangerate-api → jsDelivr currency-api). Frankfurter has no AED, so AED comes from the fallbacks
 - Manual refresh plus automatic refresh when the app is reopened
 - Shows when the app last refreshed and the market data date separately
 - iOS numeric keyboard on focus
-- Flip direction (CAD ↔ USD or CAD ↔ AED)
+- Flip direction (CAD ↔ USD, AED or ILS)
 - Installable as a PWA on iOS and Android home screen
 - Service worker keeps the installed PWA available offline and pulls app updates
 - No build step — just static HTML, CSS, JS
