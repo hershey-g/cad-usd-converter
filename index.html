@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<title>CAD to USD</title>
-<meta name="description" content="Live Canadian dollar to US dollar exchange rate." />
+<title>CAD to USD & AED</title>
+<meta name="description" content="Live Canadian dollar to US dollar and UAE dirham exchange rates." />
 
 <!-- PWA / iOS Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -105,6 +105,28 @@
     border-radius: 50%;
     background: currentColor;
     box-shadow: 0 0 0 4px rgba(30, 123, 80, 0.12);
+  }
+
+  .picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 18px;
+    background: rgba(20, 17, 15, 0.06);
+  }
+
+  .picker button {
+    min-height: 40px;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .picker button[aria-pressed="true"] {
+    background: rgba(255, 252, 246, 0.92);
+    color: var(--accent);
+    box-shadow: 0 4px 14px rgba(58, 44, 29, 0.1);
   }
 
   .status.fetching { color: var(--accent); }
@@ -285,16 +307,21 @@
 <body>
 <main class="app" aria-labelledby="app-title">
   <header class="topbar">
-    <span class="pair">CAD / USD</span>
+    <span class="pair" id="pair">CAD / USD</span>
     <span class="status fetching" id="status"><span class="dot"></span><span id="status-text">Fetching</span></span>
   </header>
 
   <section class="hero">
     <h1 id="app-title">Live exchange</h1>
-    <p class="sub">A fast Canadian dollar converter for quick checks, travel math, and cross-border prices.</p>
+    <p class="sub">A fast Canadian dollar converter for US dollars and UAE dirhams. Quick checks, travel math, cross-border prices.</p>
   </section>
 
   <section class="converter" aria-label="Currency converter">
+    <div class="picker" role="group" aria-label="Convert CAD against">
+      <button type="button" data-currency="USD" aria-pressed="true">USD</button>
+      <button type="button" data-currency="AED" aria-pressed="false">AED</button>
+    </div>
+
     <div class="money-panel">
       <div class="label"><span>You send</span><span id="from-label">CAD</span></div>
       <label class="input-row" for="from-input">
@@ -327,12 +354,18 @@
 </main>
 
 <script>
-  const APP_VERSION = '2026.05.17.2';
+  const APP_VERSION = '2026.09.23.1';
   const CACHE_KEY = 'cad-usd-rate';
-  let rate = null;
-  let marketDate = null;
+  const CURRENCIES = {
+    USD: { tag: 'US$' },
+    AED: { tag: 'AED' }
+  };
+  const HOME = { code: 'CAD', tag: 'CA$' };
+  // Each entry: { rate: CAD -> currency, marketDate: Date | null }
+  let rates = {};
   let fetchedAt = null;
-  let direction = 'CAD_TO_USD';
+  let currency = 'USD';
+  let reversed = false;
   let isFetching = false;
 
   const $ = (id) => document.getElementById(id);
@@ -349,6 +382,12 @@
   const statusText = $('status-text');
   const swapBtn = $('swap-btn');
   const refreshBtn = $('refresh-btn');
+  const pairLabel = $('pair');
+  const pickerBtns = document.querySelectorAll('.picker button');
+
+  function activeRate() {
+    return rates[currency] ? rates[currency].rate : null;
+  }
 
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -389,61 +428,81 @@
   }
 
   function saveCachedRate() {
-    if (!rate || !fetchedAt) return;
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      rate,
-      marketDate: marketDate ? marketDate.toISOString() : null,
-      fetchedAt: fetchedAt.toISOString(),
-      direction
-    }));
+    if (!fetchedAt || !Object.keys(rates).length) return;
+    const stored = {};
+    for (const [code, r] of Object.entries(rates)) {
+      stored[code] = { rate: r.rate, marketDate: r.marketDate ? r.marketDate.toISOString() : null };
+    }
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        rates: stored,
+        fetchedAt: fetchedAt.toISOString(),
+        currency,
+        reversed
+      }));
+    } catch (e) {
+      /* Storage unavailable; the app still works without a cache. */
+    }
   }
 
   function loadCachedRate() {
     try {
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (!cached || !cached.rate || !cached.fetchedAt) return;
-      rate = Number(cached.rate);
-      marketDate = cached.marketDate ? new Date(cached.marketDate) : null;
+      if (!cached || !cached.fetchedAt) return;
+      // Older caches stored a single CAD -> USD rate.
+      const stored = cached.rates || (cached.rate ? { USD: { rate: cached.rate, marketDate: cached.marketDate } } : null);
+      if (!stored) return;
+      for (const [code, r] of Object.entries(stored)) {
+        if (CURRENCIES[code] && r && r.rate) {
+          rates[code] = { rate: Number(r.rate), marketDate: r.marketDate ? new Date(r.marketDate) : null };
+        }
+      }
+      if (!Object.keys(rates).length) return;
       fetchedAt = new Date(cached.fetchedAt);
-      direction = cached.direction || direction;
+      if (CURRENCIES[cached.currency]) currency = cached.currency;
+      reversed = typeof cached.reversed === 'boolean' ? cached.reversed : cached.direction === 'USD_TO_CAD';
       setStatus('offline', 'Cached');
       updateLabels();
       updateFreshness();
       calc();
     } catch (e) {
-      localStorage.removeItem(CACHE_KEY);
+      rates = {};
+      try { localStorage.removeItem(CACHE_KEY); } catch (err) { /* ignore */ }
     }
   }
 
   function calc() {
     const raw = fromInput.value.replace(',', '.');
     const v = parseFloat(raw);
+    const rate = activeRate();
     if (!rate || Number.isNaN(v) || v < 0) {
       toOutput.textContent = '--';
       return;
     }
-    const activeRate = direction === 'CAD_TO_USD' ? rate : 1 / rate;
-    toOutput.textContent = formatMoney(v * activeRate);
+    toOutput.textContent = formatMoney(v * (reversed ? 1 / rate : rate));
   }
 
   function updateLabels() {
-    if (direction === 'CAD_TO_USD') {
-      fromLabel.textContent = 'CAD';
-      toLabel.textContent = 'USD';
-      fromTag.textContent = 'CA$';
-      toTag.textContent = 'US$';
-      rateDisplay.textContent = rate ? `1 CAD = ${rate.toFixed(4)} USD` : 'Fetching rate...';
+    const other = { code: currency, tag: CURRENCIES[currency].tag };
+    const from = reversed ? other : HOME;
+    const to = reversed ? HOME : other;
+    const rate = activeRate();
+    fromLabel.textContent = from.code;
+    toLabel.textContent = to.code;
+    fromTag.textContent = from.tag;
+    toTag.textContent = to.tag;
+    pairLabel.textContent = `CAD / ${currency}`;
+    pickerBtns.forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.currency === currency)));
+    if (rate) {
+      rateDisplay.textContent = `1 ${from.code} = ${(reversed ? 1 / rate : rate).toFixed(4)} ${to.code}`;
     } else {
-      fromLabel.textContent = 'USD';
-      toLabel.textContent = 'CAD';
-      fromTag.textContent = 'US$';
-      toTag.textContent = 'CA$';
-      rateDisplay.textContent = rate ? `1 USD = ${(1 / rate).toFixed(4)} CAD` : 'Fetching rate...';
+      rateDisplay.textContent = isFetching ? 'Fetching rate...' : 'Rate unavailable';
     }
   }
 
   function updateFreshness() {
     if (!fetchedAt) return;
+    const marketDate = rates[currency] ? rates[currency].marketDate : null;
     updatedDisplay.textContent = `Refreshed ${formatRelative(fetchedAt)}.`;
     marketDisplay.textContent = marketDate ? `Market data date: ${formatShortDate(marketDate)}.` : '';
   }
@@ -457,22 +516,31 @@
       updatedDisplay.textContent = 'Refreshing rate...';
     }
 
+    // Each source returns whichever currencies it has. Frankfurter (ECB data)
+    // has no AED, so AED comes from the fallbacks.
     const sources = [
       {
         url: 'https://api.frankfurter.dev/v1/latest?base=CAD&symbols=USD',
-        parse: (d) => ({ rate: d.rates && d.rates.USD, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
+        parse: (d) => ({ rates: d.rates || {}, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
       },
       {
         url: 'https://open.er-api.com/v6/latest/CAD',
-        parse: (d) => ({ rate: d.rates && d.rates.USD, marketDate: d.time_last_update_unix ? new Date(d.time_last_update_unix * 1000) : null })
+        parse: (d) => ({ rates: d.rates || {}, marketDate: d.time_last_update_unix ? new Date(d.time_last_update_unix * 1000) : null })
       },
       {
         url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cad.json',
-        parse: (d) => ({ rate: d.cad && d.cad.usd, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
+        parse: (d) => ({
+          rates: Object.fromEntries(Object.keys(CURRENCIES).map((code) => [code, d.cad && d.cad[code.toLowerCase()]])),
+          marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null
+        })
       }
     ];
 
+    const fresh = {};
+    const missing = () => Object.keys(CURRENCIES).filter((code) => !fresh[code]);
+
     for (const src of sources) {
+      if (!missing().length) break;
       const bust = src.url.includes('?') ? '&' : '?';
       const url = `${src.url}${bust}_=${Date.now()}`;
       try {
@@ -484,29 +552,32 @@
 
         const data = await res.json();
         const parsed = src.parse(data);
-        if (parsed.rate && !Number.isNaN(parsed.rate)) {
-          rate = Number(parsed.rate);
-          marketDate = parsed.marketDate;
-          fetchedAt = new Date();
-          setStatus('', 'Live');
-          updateLabels();
-          updateFreshness();
-          calc();
-          saveCachedRate();
-          isFetching = false;
-          refreshBtn.disabled = false;
-          return;
+        for (const code of missing()) {
+          const value = Number(parsed.rates[code]);
+          if (value > 0) fresh[code] = { rate: value, marketDate: parsed.marketDate };
         }
       } catch (e) {
         /* Try the next source. */
       }
     }
 
-    setStatus('offline', 'Offline');
-    rateDisplay.textContent = rate ? rateDisplay.textContent : 'Rate unavailable';
-    updatedDisplay.textContent = rate ? `Using cached rate from ${formatRelative(fetchedAt)}.` : 'Check connection, then tap Refresh.';
     isFetching = false;
     refreshBtn.disabled = false;
+
+    if (Object.keys(fresh).length) {
+      rates = { ...rates, ...fresh };
+      fetchedAt = new Date();
+      setStatus('', 'Live');
+      updateLabels();
+      updateFreshness();
+      calc();
+      saveCachedRate();
+      return;
+    }
+
+    setStatus('offline', 'Offline');
+    updateLabels();
+    updatedDisplay.textContent = fetchedAt ? `Using cached rate from ${formatRelative(fetchedAt)}.` : 'Check connection, then tap Refresh.';
   }
 
   function maybeRefresh() {
@@ -522,11 +593,18 @@
   fromInput.addEventListener('input', calc);
   fromInput.addEventListener('focus', () => fromInput.select());
   swapBtn.addEventListener('click', () => {
-    direction = direction === 'CAD_TO_USD' ? 'USD_TO_CAD' : 'CAD_TO_USD';
+    reversed = !reversed;
     updateLabels();
     calc();
     saveCachedRate();
   });
+  pickerBtns.forEach((btn) => btn.addEventListener('click', () => {
+    currency = btn.dataset.currency;
+    updateLabels();
+    updateFreshness();
+    calc();
+    saveCachedRate();
+  }));
   refreshBtn.addEventListener('click', () => fetchRate());
 
   document.addEventListener('visibilitychange', () => {
@@ -539,7 +617,7 @@
 
   showInstallHintWhenUseful();
   loadCachedRate();
-  fetchRate({ silent: Boolean(rate) });
+  fetchRate({ silent: Boolean(activeRate()) });
 
   if ('serviceWorker' in navigator) {
     let refreshing = false;
