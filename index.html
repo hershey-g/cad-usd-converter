@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<title>CAD, AED & ILS to USD</title>
-<meta name="description" content="Live Canadian dollar, UAE dirham and Israeli shekel to US dollar exchange rates." />
+<title>USD, CAD, AED & ILS</title>
+<meta name="description" content="Live exchange rates between US dollars, Canadian dollars, UAE dirhams and Israeli shekels." />
 
 <!-- PWA / iOS Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -109,16 +109,18 @@
 
   .picker {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 4px;
+    margin-top: 12px;
     padding: 4px;
-    border-radius: 18px;
+    border-radius: 16px;
     background: rgba(20, 17, 15, 0.06);
   }
 
   .picker button {
-    min-height: 40px;
-    border-radius: 14px;
+    min-height: 38px;
+    border-radius: 12px;
+    font-size: 12px;
     background: transparent;
     color: var(--muted);
   }
@@ -232,7 +234,7 @@
 
   .tools {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 10px;
     margin-top: 10px;
     min-width: 0;
@@ -301,46 +303,52 @@
     .sub { margin-top: 12px; }
     .money-panel { padding: 16px; border-radius: 24px; }
     button { min-height: 50px; }
+    .picker button { min-height: 36px; }
   }
 </style>
 </head>
 <body>
 <main class="app" aria-labelledby="app-title">
   <header class="topbar">
-    <span class="pair" id="pair">CAD / USD</span>
+    <span class="pair" id="pair">USD / CAD</span>
     <span class="status fetching" id="status"><span class="dot"></span><span id="status-text">Fetching</span></span>
   </header>
 
   <section class="hero">
     <h1 id="app-title">Live exchange</h1>
-    <p class="sub">A fast US dollar converter for Canadian dollars, UAE dirhams and Israeli shekels. Quick checks, travel math, cross-border prices.</p>
+    <p class="sub">A fast converter for US dollars, Canadian dollars, UAE dirhams and Israeli shekels. Quick checks, travel math, cross-border prices.</p>
   </section>
 
   <section class="converter" aria-label="Currency converter">
-    <div class="picker" role="group" aria-label="Convert against USD">
-      <button type="button" data-currency="CAD" aria-pressed="true">CAD</button>
-      <button type="button" data-currency="AED" aria-pressed="false">AED</button>
-      <button type="button" data-currency="ILS" aria-pressed="false">ILS</button>
-    </div>
-
     <div class="money-panel">
-      <div class="label"><span>You send</span><span id="from-label">CAD</span></div>
+      <div class="label"><span>You send</span></div>
+      <div class="picker" role="group" aria-label="Currency you send" data-side="from">
+        <button type="button" data-currency="USD" aria-pressed="true">USD</button>
+        <button type="button" data-currency="CAD" aria-pressed="false">CAD</button>
+        <button type="button" data-currency="AED" aria-pressed="false">AED</button>
+        <button type="button" data-currency="ILS" aria-pressed="false">ILS</button>
+      </div>
       <label class="input-row" for="from-input">
-        <span class="currency-tag" id="from-tag">CA$</span>
+        <span class="currency-tag" id="from-tag">US$</span>
         <input id="from-input" value="100" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" autocomplete="off" enterkeyhint="done" aria-label="Amount to convert" />
       </label>
     </div>
 
     <div class="money-panel">
-      <div class="label"><span>You receive</span><span id="to-label">USD</span></div>
+      <div class="label"><span>You receive</span></div>
+      <div class="picker" role="group" aria-label="Currency you receive" data-side="to">
+        <button type="button" data-currency="USD" aria-pressed="false">USD</button>
+        <button type="button" data-currency="CAD" aria-pressed="true">CAD</button>
+        <button type="button" data-currency="AED" aria-pressed="false">AED</button>
+        <button type="button" data-currency="ILS" aria-pressed="false">ILS</button>
+      </div>
       <div class="result-row">
-        <span class="currency-tag" id="to-tag">US$</span>
+        <span class="currency-tag" id="to-tag">CA$</span>
         <div class="result" id="to-output" aria-live="polite">--</div>
       </div>
     </div>
 
     <div class="tools">
-      <button class="secondary" id="swap-btn" type="button" aria-label="Flip currencies">Flip</button>
       <button id="refresh-btn" type="button" aria-label="Refresh exchange rate">Refresh</button>
     </div>
 
@@ -355,28 +363,29 @@
 </main>
 
 <script>
-  const APP_VERSION = '2026.09.25.1';
+  const APP_VERSION = '2026.09.25.2';
   const CACHE_KEY = 'usd-rates';
   // Earlier versions cached CAD-based rates under this key.
   const LEGACY_CACHE_KEY = 'cad-usd-rate';
+  const PREFS_KEY = 'converter-prefs';
   const CURRENCIES = {
+    USD: { tag: 'US$' },
     CAD: { tag: 'CA$' },
     AED: { tag: 'AED' },
     ILS: { tag: 'ILS' }
   };
-  const HOME = { code: 'USD', tag: 'US$' };
+  // Rates are kept against USD, so USD itself is never fetched.
+  const RATE_CODES = Object.keys(CURRENCIES).filter((code) => code !== 'USD');
   // Each entry: { rate: currency -> USD, marketDate: Date | null }
   let rates = {};
   let fetchedAt = null;
-  let currency = 'CAD';
-  let reversed = false;
+  let from = 'USD';
+  let to = 'CAD';
   let isFetching = false;
 
   const $ = (id) => document.getElementById(id);
   const fromInput = $('from-input');
   const toOutput = $('to-output');
-  const fromLabel = $('from-label');
-  const toLabel = $('to-label');
   const fromTag = $('from-tag');
   const toTag = $('to-tag');
   const rateDisplay = $('rate-display');
@@ -384,13 +393,52 @@
   const marketDisplay = $('market-display');
   const status = $('status');
   const statusText = $('status-text');
-  const swapBtn = $('swap-btn');
   const refreshBtn = $('refresh-btn');
   const pairLabel = $('pair');
-  const pickerBtns = document.querySelectorAll('.picker button');
+  const pickers = document.querySelectorAll('.picker');
+
+  function toUsd(code) {
+    if (code === 'USD') return 1;
+    return rates[code] ? rates[code].rate : null;
+  }
 
   function activeRate() {
-    return rates[currency] ? rates[currency].rate : null;
+    const fromUsd = toUsd(from);
+    const toUsdRate = toUsd(to);
+    return fromUsd && toUsdRate ? fromUsd / toUsdRate : null;
+  }
+
+  function savePrefs() {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ from, to, amount: fromInput.value }));
+    } catch (e) {
+      /* Storage unavailable; prefs just won't persist. */
+    }
+  }
+
+  function loadPrefs() {
+    try {
+      const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
+      if (!prefs) return;
+      if (CURRENCIES[prefs.from] && CURRENCIES[prefs.to] && prefs.from !== prefs.to) {
+        from = prefs.from;
+        to = prefs.to;
+      }
+      if (typeof prefs.amount === 'string') fromInput.value = prefs.amount;
+    } catch (e) {
+      /* Ignore unreadable prefs and keep the defaults. */
+    }
+  }
+
+  function selectCurrency(side, code) {
+    // Picking the currency already on the other side swaps the two.
+    if (side === 'from') {
+      if (code === to) to = from;
+      from = code;
+    } else {
+      if (code === from) from = to;
+      to = code;
+    }
   }
 
   function isStandalone() {
@@ -440,18 +488,37 @@
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         rates: stored,
-        fetchedAt: fetchedAt.toISOString(),
-        currency,
-        reversed
+        fetchedAt: fetchedAt.toISOString()
       }));
     } catch (e) {
       /* Storage unavailable; the app still works without a cache. */
     }
   }
 
+  // Converts the old CAD-based cache (rate = CAD -> currency) to USD-based
+  // rates so an offline first launch after the update still has numbers.
+  function migrateLegacyCache() {
+    let legacy = null;
+    try {
+      legacy = JSON.parse(localStorage.getItem(LEGACY_CACHE_KEY) || 'null');
+      localStorage.removeItem(LEGACY_CACHE_KEY);
+    } catch (e) {
+      return null;
+    }
+    const old = legacy && legacy.rates;
+    const cadToUsd = old && old.USD && Number(old.USD.rate);
+    if (!cadToUsd || !legacy.fetchedAt) return null;
+    const migrated = { CAD: { rate: cadToUsd, marketDate: old.USD.marketDate } };
+    for (const code of ['AED', 'ILS']) {
+      const cadToCode = old[code] && Number(old[code].rate);
+      if (cadToCode) migrated[code] = { rate: cadToUsd / cadToCode, marketDate: old[code].marketDate };
+    }
+    return { rates: migrated, fetchedAt: legacy.fetchedAt };
+  }
+
   function loadCachedRate() {
     try {
-      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || migrateLegacyCache();
       if (!cached || !cached.fetchedAt || !cached.rates) return;
       for (const [code, r] of Object.entries(cached.rates)) {
         if (CURRENCIES[code] && r && r.rate) {
@@ -460,8 +527,8 @@
       }
       if (!Object.keys(rates).length) return;
       fetchedAt = new Date(cached.fetchedAt);
-      if (CURRENCIES[cached.currency]) currency = cached.currency;
-      reversed = cached.reversed === true;
+      // Persist in the current format (a no-op unless the legacy cache was migrated).
+      saveCachedRate();
       setStatus('offline', 'Cached');
       updateLabels();
       updateFreshness();
@@ -480,22 +547,20 @@
       toOutput.textContent = '--';
       return;
     }
-    toOutput.textContent = formatMoney(v * (reversed ? 1 / rate : rate));
+    toOutput.textContent = formatMoney(v * rate);
   }
 
   function updateLabels() {
-    const other = { code: currency, tag: CURRENCIES[currency].tag };
-    const from = reversed ? HOME : other;
-    const to = reversed ? other : HOME;
     const rate = activeRate();
-    fromLabel.textContent = from.code;
-    toLabel.textContent = to.code;
-    fromTag.textContent = from.tag;
-    toTag.textContent = to.tag;
-    pairLabel.textContent = `${currency} / USD`;
-    pickerBtns.forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.currency === currency)));
+    fromTag.textContent = CURRENCIES[from].tag;
+    toTag.textContent = CURRENCIES[to].tag;
+    pairLabel.textContent = `${from} / ${to}`;
+    pickers.forEach((picker) => {
+      const selected = picker.dataset.side === 'from' ? from : to;
+      picker.querySelectorAll('button').forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.currency === selected)));
+    });
     if (rate) {
-      rateDisplay.textContent = `1 ${from.code} = ${(reversed ? 1 / rate : rate).toFixed(4)} ${to.code}`;
+      rateDisplay.textContent = `1 ${from} = ${rate.toFixed(4)} ${to}`;
     } else {
       rateDisplay.textContent = isFetching ? 'Fetching rate...' : 'Rate unavailable';
     }
@@ -503,7 +568,11 @@
 
   function updateFreshness() {
     if (!fetchedAt) return;
-    const marketDate = rates[currency] ? rates[currency].marketDate : null;
+    // Show the older market date of the two currencies in the pair.
+    const dates = [from, to]
+      .map((code) => (rates[code] ? rates[code].marketDate : null))
+      .filter(Boolean);
+    const marketDate = dates.length ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
     updatedDisplay.textContent = `Refreshed ${formatRelative(fetchedAt)}.`;
     marketDisplay.textContent = marketDate ? `Market data date: ${formatShortDate(marketDate)}.` : '';
   }
@@ -532,14 +601,14 @@
       {
         url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
         parse: (d) => ({
-          rates: Object.fromEntries(Object.keys(CURRENCIES).map((code) => [code, d.usd && d.usd[code.toLowerCase()]])),
+          rates: Object.fromEntries(RATE_CODES.map((code) => [code, d.usd && d.usd[code.toLowerCase()]])),
           marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null
         })
       }
     ];
 
     const fresh = {};
-    const missing = () => Object.keys(CURRENCIES).filter((code) => !fresh[code]);
+    const missing = () => RATE_CODES.filter((code) => !fresh[code]);
 
     for (const src of sources) {
       if (!missing().length) break;
@@ -592,20 +661,19 @@
     else updateFreshness();
   }
 
-  fromInput.addEventListener('input', calc);
-  fromInput.addEventListener('focus', () => fromInput.select());
-  swapBtn.addEventListener('click', () => {
-    reversed = !reversed;
-    updateLabels();
+  fromInput.addEventListener('input', () => {
     calc();
-    saveCachedRate();
+    savePrefs();
   });
-  pickerBtns.forEach((btn) => btn.addEventListener('click', () => {
-    currency = btn.dataset.currency;
+  fromInput.addEventListener('focus', () => fromInput.select());
+  pickers.forEach((picker) => picker.addEventListener('click', (event) => {
+    const btn = event.target.closest('button[data-currency]');
+    if (!btn) return;
+    selectCurrency(picker.dataset.side, btn.dataset.currency);
     updateLabels();
     updateFreshness();
     calc();
-    saveCachedRate();
+    savePrefs();
   }));
   refreshBtn.addEventListener('click', () => fetchRate());
 
@@ -618,7 +686,8 @@
   window.setInterval(() => fetchRate({ silent: true }), 15 * 60 * 1000);
 
   showInstallHintWhenUseful();
-  try { localStorage.removeItem(LEGACY_CACHE_KEY); } catch (e) { /* ignore */ }
+  loadPrefs();
+  updateLabels();
   loadCachedRate();
   fetchRate({ silent: Boolean(activeRate()) });
 

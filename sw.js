@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_VERSION = 'cad-usd-converter-2026-09-25-1';
+const CACHE_VERSION = 'cad-usd-converter-2026-09-25-2';
 const APP_SHELL = [
   './',
   './index.html',
