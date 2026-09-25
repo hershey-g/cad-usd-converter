@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<title>CAD to USD, AED & ILS</title>
-<meta name="description" content="Live Canadian dollar to US dollar, UAE dirham and Israeli shekel exchange rates." />
+<title>CAD, AED & ILS to USD</title>
+<meta name="description" content="Live Canadian dollar, UAE dirham and Israeli shekel to US dollar exchange rates." />
 
 <!-- PWA / iOS Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -313,12 +313,12 @@
 
   <section class="hero">
     <h1 id="app-title">Live exchange</h1>
-    <p class="sub">A fast Canadian dollar converter for US dollars, UAE dirhams and Israeli shekels. Quick checks, travel math, cross-border prices.</p>
+    <p class="sub">A fast US dollar converter for Canadian dollars, UAE dirhams and Israeli shekels. Quick checks, travel math, cross-border prices.</p>
   </section>
 
   <section class="converter" aria-label="Currency converter">
-    <div class="picker" role="group" aria-label="Convert CAD against">
-      <button type="button" data-currency="USD" aria-pressed="true">USD</button>
+    <div class="picker" role="group" aria-label="Convert against USD">
+      <button type="button" data-currency="CAD" aria-pressed="true">CAD</button>
       <button type="button" data-currency="AED" aria-pressed="false">AED</button>
       <button type="button" data-currency="ILS" aria-pressed="false">ILS</button>
     </div>
@@ -355,18 +355,20 @@
 </main>
 
 <script>
-  const APP_VERSION = '2026.09.24.1';
-  const CACHE_KEY = 'cad-usd-rate';
+  const APP_VERSION = '2026.09.25.1';
+  const CACHE_KEY = 'usd-rates';
+  // Earlier versions cached CAD-based rates under this key.
+  const LEGACY_CACHE_KEY = 'cad-usd-rate';
   const CURRENCIES = {
-    USD: { tag: 'US$' },
+    CAD: { tag: 'CA$' },
     AED: { tag: 'AED' },
     ILS: { tag: 'ILS' }
   };
-  const HOME = { code: 'CAD', tag: 'CA$' };
-  // Each entry: { rate: CAD -> currency, marketDate: Date | null }
+  const HOME = { code: 'USD', tag: 'US$' };
+  // Each entry: { rate: currency -> USD, marketDate: Date | null }
   let rates = {};
   let fetchedAt = null;
-  let currency = 'USD';
+  let currency = 'CAD';
   let reversed = false;
   let isFetching = false;
 
@@ -450,11 +452,8 @@
   function loadCachedRate() {
     try {
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (!cached || !cached.fetchedAt) return;
-      // Older caches stored a single CAD -> USD rate.
-      const stored = cached.rates || (cached.rate ? { USD: { rate: cached.rate, marketDate: cached.marketDate } } : null);
-      if (!stored) return;
-      for (const [code, r] of Object.entries(stored)) {
+      if (!cached || !cached.fetchedAt || !cached.rates) return;
+      for (const [code, r] of Object.entries(cached.rates)) {
         if (CURRENCIES[code] && r && r.rate) {
           rates[code] = { rate: Number(r.rate), marketDate: r.marketDate ? new Date(r.marketDate) : null };
         }
@@ -462,7 +461,7 @@
       if (!Object.keys(rates).length) return;
       fetchedAt = new Date(cached.fetchedAt);
       if (CURRENCIES[cached.currency]) currency = cached.currency;
-      reversed = typeof cached.reversed === 'boolean' ? cached.reversed : cached.direction === 'USD_TO_CAD';
+      reversed = cached.reversed === true;
       setStatus('offline', 'Cached');
       updateLabels();
       updateFreshness();
@@ -486,14 +485,14 @@
 
   function updateLabels() {
     const other = { code: currency, tag: CURRENCIES[currency].tag };
-    const from = reversed ? other : HOME;
-    const to = reversed ? HOME : other;
+    const from = reversed ? HOME : other;
+    const to = reversed ? other : HOME;
     const rate = activeRate();
     fromLabel.textContent = from.code;
     toLabel.textContent = to.code;
     fromTag.textContent = from.tag;
     toTag.textContent = to.tag;
-    pairLabel.textContent = `CAD / ${currency}`;
+    pairLabel.textContent = `${currency} / USD`;
     pickerBtns.forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.currency === currency)));
     if (rate) {
       rateDisplay.textContent = `1 ${from.code} = ${(reversed ? 1 / rate : rate).toFixed(4)} ${to.code}`;
@@ -518,21 +517,22 @@
       updatedDisplay.textContent = 'Refreshing rate...';
     }
 
-    // Each source returns whichever currencies it has. Frankfurter (ECB data)
-    // has USD and ILS but no AED, so AED comes from the fallbacks.
+    // Each source returns USD -> currency for whichever currencies it has.
+    // Frankfurter (ECB data) has CAD and ILS but no AED, so AED comes from
+    // the fallbacks.
     const sources = [
       {
-        url: 'https://api.frankfurter.dev/v1/latest?base=CAD&symbols=USD,ILS',
+        url: 'https://api.frankfurter.dev/v1/latest?base=USD&symbols=CAD,ILS',
         parse: (d) => ({ rates: d.rates || {}, marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null })
       },
       {
-        url: 'https://open.er-api.com/v6/latest/CAD',
+        url: 'https://open.er-api.com/v6/latest/USD',
         parse: (d) => ({ rates: d.rates || {}, marketDate: d.time_last_update_unix ? new Date(d.time_last_update_unix * 1000) : null })
       },
       {
-        url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cad.json',
+        url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
         parse: (d) => ({
-          rates: Object.fromEntries(Object.keys(CURRENCIES).map((code) => [code, d.cad && d.cad[code.toLowerCase()]])),
+          rates: Object.fromEntries(Object.keys(CURRENCIES).map((code) => [code, d.usd && d.usd[code.toLowerCase()]])),
           marketDate: d.date ? new Date(`${d.date}T12:00:00Z`) : null
         })
       }
@@ -556,7 +556,7 @@
         const parsed = src.parse(data);
         for (const code of missing()) {
           const value = Number(parsed.rates[code]);
-          if (value > 0) fresh[code] = { rate: value, marketDate: parsed.marketDate };
+          if (value > 0) fresh[code] = { rate: 1 / value, marketDate: parsed.marketDate };
         }
       } catch (e) {
         /* Try the next source. */
@@ -618,6 +618,7 @@
   window.setInterval(() => fetchRate({ silent: true }), 15 * 60 * 1000);
 
   showInstallHintWhenUseful();
+  try { localStorage.removeItem(LEGACY_CACHE_KEY); } catch (e) { /* ignore */ }
   loadCachedRate();
   fetchRate({ silent: Boolean(activeRate()) });
 
