@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 // Bump on every release: a changed sw.js is what tells installed apps to update.
-const CACHE_VERSION = 'live-exchange-2026-09-26-1';
+const CACHE_VERSION = 'live-exchange-2026-09-27-1';
 const APP_SHELL = [
   './',
   './index.html',
