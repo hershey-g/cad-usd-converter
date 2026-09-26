@@ -1,4 +1,4 @@
-# USD · CAD · AED · ILS
+# Live Exchange
 
 A live exchange rate converter between US dollars (USD), Canadian dollars (CAD), UAE dirhams (AED) and Israeli shekels (ILS). Editorial design, PWA-installable, works offline as a home screen app on iOS.
 
@@ -11,12 +11,12 @@ A live exchange rate converter between US dollars (USD), Canadian dollars (CAD),
 - Shows when the app last refreshed and the market data date separately
 - iOS numeric keyboard on focus
 - Installable as a PWA on iOS and Android home screen
-- Service worker keeps the installed PWA available offline and pulls app updates
+- Opens instantly from the service worker cache, works offline, and updates itself in the background (the page reloads once when a new release is ready)
 - No build step — just static HTML, CSS, JS
 
 ## Stack
 
-Static site. No dependencies.
+Static site. No dependencies. Fraunces and Inter are self-hosted in `fonts/` (SIL Open Font License).
 
 - Frankfurter API (primary)
 - exchangerate-api.com (fallback)
@@ -46,6 +46,9 @@ Launches fullscreen with the custom icon.
 
 - `index.html` — the app
 - `manifest.json` — PWA manifest
+- `sw.js` — service worker. Bump `CACHE_VERSION` on every release; that is what makes installed apps update
+- `_headers` — Cloudflare Pages cache headers (app shell always revalidates, fonts cached for a year)
+- `fonts/` — self-hosted Latin subsets of Fraunces and Inter
 - `apple-touch-icon.png` — iOS home screen icon (180×180)
 - `icon-192.png`, `icon-512.png` — PWA manifest icons
 - `favicon-32.png` — browser favicon

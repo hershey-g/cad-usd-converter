@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<title>USD, CAD, AED & ILS</title>
+<title>Live Exchange</title>
 <meta name="description" content="Live exchange rates between US dollars, Canadian dollars, UAE dirhams and Israeli shekels." />
 
 <!-- PWA / iOS Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="CAD USD">
+<meta name="apple-mobile-web-app-title" content="Exchange">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f8f4ec">
 <meta name="format-detection" content="telephone=no">
@@ -19,10 +19,27 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,550;9..144,700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://api.frankfurter.dev" crossorigin>
+<link rel="preconnect" href="https://open.er-api.com" crossorigin>
 <style>
+  /* Self-hosted (SIL Open Font License) so first paint never waits on a third party. */
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url(fonts/fraunces-latin.woff2) format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url(fonts/inter-latin.woff2) format('woff2');
+  }
+
   :root {
     --bg: #f8f4ec;
     --ink: #14110f;
@@ -363,7 +380,6 @@
 </main>
 
 <script>
-  const APP_VERSION = '2026.09.25.2';
   const CACHE_KEY = 'usd-rates';
   // Earlier versions cached CAD-based rates under this key.
   const LEGACY_CACHE_KEY = 'cad-usd-rate';
@@ -610,25 +626,29 @@
     const fresh = {};
     const missing = () => RATE_CODES.filter((code) => !fresh[code]);
 
-    for (const src of sources) {
-      if (!missing().length) break;
+    // Query every source at once so one slow or missing source never delays
+    // the rest, then merge in priority order.
+    const results = await Promise.all(sources.map(async (src) => {
       const bust = src.url.includes('?') ? '&' : '?';
       const url = `${src.url}${bust}_=${Date.now()}`;
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 6000);
       try {
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 7000);
         const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
-        clearTimeout(timeout);
-        if (!res.ok) continue;
-
-        const data = await res.json();
-        const parsed = src.parse(data);
-        for (const code of missing()) {
-          const value = Number(parsed.rates[code]);
-          if (value > 0) fresh[code] = { rate: 1 / value, marketDate: parsed.marketDate };
-        }
+        if (!res.ok) return null;
+        return src.parse(await res.json());
       } catch (e) {
-        /* Try the next source. */
+        return null;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }));
+
+    for (const parsed of results) {
+      if (!parsed) continue;
+      for (const code of missing()) {
+        const value = Number(parsed.rates[code]);
+        if (value > 0) fresh[code] = { rate: 1 / value, marketDate: parsed.marketDate };
       }
     }
 
@@ -692,15 +712,17 @@
   fetchRate({ silent: Boolean(activeRate()) });
 
   if ('serviceWorker' in navigator) {
+    // Only reload when a new version replaces a running one, not on first install.
+    const hadController = Boolean(navigator.serviceWorker.controller);
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
+      if (!hadController || refreshing) return;
       refreshing = true;
       window.location.reload();
     });
 
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).then((registration) => {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((registration) => {
         registration.addEventListener('updatefound', () => {
           const worker = registration.installing;
           if (!worker) return;
@@ -709,6 +731,11 @@
               worker.postMessage({ type: 'SKIP_WAITING' });
             }
           });
+        });
+        // Home screen apps are usually resumed rather than relaunched, which
+        // skips the browser's own update check, so check on every resume.
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) registration.update().catch(() => {});
         });
       }).catch(() => {});
     });

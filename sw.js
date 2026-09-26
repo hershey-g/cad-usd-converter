@@ -1,10 +1,13 @@
 /// <reference lib="webworker" />
 
-const CACHE_VERSION = 'cad-usd-converter-2026-09-25-2';
+// Bump on every release: a changed sw.js is what tells installed apps to update.
+const CACHE_VERSION = 'live-exchange-2026-09-26-1';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './fonts/fraunces-latin.woff2',
+  './fonts/inter-latin.woff2',
   './apple-touch-icon.png',
   './favicon-32.png',
   './icon-192.png',
@@ -17,7 +20,8 @@ sw.addEventListener('install', (event) => {
   const installEvent = /** @type {ExtendableEvent} */ (event);
   installEvent.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL))
+      // 'reload' skips the HTTP cache so a new version never precaches stale files.
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => sw.skipWaiting())
   );
 });
@@ -43,28 +47,18 @@ sw.addEventListener('fetch', (event) => {
   const request = fetchEvent.request;
   const url = new URL(request.url);
 
+  // Open instantly from the cached shell. Updates arrive through a new sw.js,
+  // which precaches the new shell and reloads the page once it takes over.
   if (request.mode === 'navigate') {
     fetchEvent.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put('./index.html', copy));
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
+      caches.match('./index.html').then((cached) => cached || fetch(request))
     );
     return;
   }
 
-  if (url.origin !== self.location.origin || request.method !== 'GET') return;
+  if (url.origin !== sw.location.origin || request.method !== 'GET') return;
 
   fetchEvent.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request).then((response) => {
-        caches.open(CACHE_VERSION).then((cache) => cache.put(request, response.clone()));
-        return response;
-      });
-      return cached || network;
-    })
+    caches.match(request, { ignoreSearch: true }).then((cached) => cached || fetch(request))
   );
 });
