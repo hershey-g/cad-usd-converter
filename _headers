@@ -1,0 +1,13 @@
+# Cloudflare Pages response headers.
+# The app shell is served from the service worker cache, so the network copies
+# must always revalidate or installed apps can pick up a stale release.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-cache
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,7 +1,7 @@
 {
-  "name": "CAD USD Converter",
-  "short_name": "CAD USD",
-  "description": "Live Canadian dollar to US dollar exchange rate converter",
+  "name": "Live Exchange",
+  "short_name": "Exchange",
+  "description": "Live exchange rates between US dollars, Canadian dollars, UAE dirhams and Israeli shekels",
   "id": "/cad-usd-converter/",
   "start_url": "./?source=pwa",
   "scope": "./",
