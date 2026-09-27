@@ -16,7 +16,7 @@ A live exchange rate converter between US dollars (USD), Canadian dollars (CAD),
 
 ## Stack
 
-Static site. No dependencies. Fraunces and Inter are self-hosted in `fonts/` (SIL Open Font License).
+Static site. No dependencies. Fraunces and Inter are self-hosted in `fonts/` under the SIL Open Font License (see `fonts/OFL-Fraunces.txt` and `fonts/OFL-Inter.txt`).
 
 - Frankfurter API (primary)
 - exchangerate-api.com (fallback)
